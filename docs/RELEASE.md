@@ -1,8 +1,8 @@
 # 发布流程
 
-正式名称为 **dsh-usage-meter**，安装包发布在本仓库的 [GitHub Releases](https://github.com/gaolin89898/dsh-usage-meter/releases)。
+正式名称为 **@gl070900/dsh-usage-meter**，安装包发布在本仓库的 [GitHub Releases](https://github.com/gaolin89898/dsh-usage-meter/releases)。
 
-npm 上的无 scope 包 `dsh-usage-meter` 属于其他维护者，不能用于本仓库发布或安装。本项目的更新检查仅查询本仓库的 GitHub Releases。
+项目使用 npm 作用域包名 `@gl070900/dsh-usage-meter`，安装包以 GitHub Releases 为准。本项目的更新检查仅查询本仓库的 GitHub Releases。
 
 ## 发布
 
@@ -20,7 +20,7 @@ GitHub Actions 对 main 推送执行回归测试、语法检查与打包；Relea
 
 ## 命名与兼容
 
-- `package.json.name`、客户端 module-loader id、配置页 key 和 bundle 的 `name` 必须一致，均为 `dsh-usage-meter`。
+- `package.json.name`、客户端 module-loader id、配置页 key 和 bundle 的 `name` 必须一致，均为 `@gl070900/dsh-usage-meter`。
 - bundle 的 entry id 与 settings namespace 保留 `dsh-opencode-go-usage`，让已有配置继续生效。
 - HTTP 路径与聊天命令仍使用 `/opencode-go`。
 - 从旧版升级时请遵循[安装指南](INSTALL.zh.md)，避免同时启用两个插件副本。

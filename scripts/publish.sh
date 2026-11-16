@@ -15,7 +15,7 @@ for file in lib/*.js; do node --check "$file"; done
 
 VERSION="$(node -p "require('./package.json').version")"
 PACKAGE="$(node -p "require('./package.json').name")"
-test "$PACKAGE" = dsh-usage-meter
+test "$PACKAGE" = "@gl070900/dsh-usage-meter"
 RELEASE_DIR="$(mktemp -d)"
 trap 'rm -rf "$RELEASE_DIR"' EXIT
 npm pack --pack-destination "$RELEASE_DIR"
@@ -27,5 +27,5 @@ git diff --stat origin/main HEAD
 git push origin HEAD:refs/heads/main
 git tag "v$VERSION"
 git push origin "refs/tags/v$VERSION:refs/tags/v$VERSION"
-gh release create "v$VERSION" "$RELEASE_DIR/$PACKAGE-$VERSION.tgz" "$RELEASE_DIR/SHA256SUMS.txt" \
+gh release create "v$VERSION" "$RELEASE_DIR"/*.tgz "$RELEASE_DIR/SHA256SUMS.txt" \
   --repo gaolin89898/dsh-usage-meter --verify-tag --title "$PACKAGE v$VERSION" --generate-notes

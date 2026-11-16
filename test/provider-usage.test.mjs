@@ -5,6 +5,12 @@ import { callRoute, credentials, jsonResponse, loadHost, makeCtx, usagePayload }
 
 const host = await loadHost();
 const miniPayload = { model_remains: [{ model_name: "MiniMax-M2.5", current_interval_remaining_percent: 75, current_weekly_remaining_percent: 90, end_time: 1800000000000 }] };
+const overviewPayload = {
+	accounts: [{ nickname: "one", credits: 2540, credits_total: 6300, realm: "cn" }, { nickname: "two", credits: 2064, credits_total: 4100, realm: "global" }],
+	doubao_accounts: [{ credits: 4004, credits_total: 4100, plan: "标准套餐" }],
+	minimax_accounts: [{ credits: 4424 }],
+	trae_accounts: [], qoder_accounts: [], loomy_accounts: [], antigravity_accounts: []
+};
 
 function boot() {
 	const providers = {
@@ -13,9 +19,11 @@ function boot() {
 		deepseek: { apiKeyEnv: "DEEP" },
 		openrouter: { apiKeyEnv: "ROUTER" },
 		"moonshot-cn": { apiKeyEnv: "MOON" },
+		"ai-toolbox": { apiKeyEnv: "AI_TOOLBOX_API_KEY", baseURL: "http://127.0.0.1:7863/v1" },
+		"remote-http": { apiKeyEnv: "CUSTOM", baseURL: "http://example.com/v1" },
 		custom: { apiKeyEnv: "CUSTOM", baseURL: "https://example.com/v1" }
 	};
-	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MOON: "moon-test", CUSTOM: "custom-test" };
+	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MOON: "moon-test", AI_TOOLBOX_API_KEY: "toolbox-test", CUSTOM: "custom-test" };
 	const requests = [];
 	let fail = false;
 	globalThis.fetch = async (url, options) => {
@@ -23,6 +31,7 @@ function boot() {
 		requests.push({ url, auth: new Headers(options.headers).get("authorization") });
 		if (fail) return jsonResponse({ error: "private upstream message" }, 401);
 		if (String(url).includes("coding_plan/remains")) return jsonResponse(miniPayload);
+		if (String(url).includes("/panel/api/overview")) return jsonResponse(overviewPayload);
 		if (String(url).includes("opencode.ai")) return jsonResponse(usagePayload());
 		if (String(url).includes("deepseek.com")) return jsonResponse({ balance_infos: [{ total_balance: "12.3456", currency: "CNY" }, { total_balance: "0", currency: "USD" }] });
 		if (String(url).includes("openrouter.ai")) return jsonResponse({ data: { total_credits: 10, total_usage: 3.5 } });
@@ -59,7 +68,7 @@ test("provider route switches GO, MiniMax and monetary balances with matching cr
 
 test("unsupported routes, custom proxies and missing credentials never fall back to GO", async () => {
 	const app = boot();
-	for (const id of ["custom", "unknown", "__proto__"]) {
+	for (const id of ["custom", "remote-http", "unknown", "__proto__"]) {
 		const response = await app.usage(id);
 		assert.equal(response.status, 200);
 		assert.equal(response.body.kind, "unavailable");
@@ -69,6 +78,22 @@ test("unsupported routes, custom proxies and missing credentials never fall back
 	delete app.map.MINI;
 	assert.equal((await app.usage("minimax-cn")).body.reason, "missing-credential");
 	assert.equal(app.requests.length, 0);
+});
+
+test("AI Toolbox aggregates credits by model prefix and keeps credentials in the host", async () => {
+	const app = boot();
+	const workbuddy = await app.usage("ai-toolbox", "cn:glm-5.3");
+	assert.equal(workbuddy.body.provider.name, "AI 工具箱网关");
+	assert.equal(workbuddy.body.usage.monthly.percent, 55.73);
+	assert.equal((await app.usage("ai-toolbox", "doubao/doubao")).body.usage.monthly.percent, 2.34);
+	const unsupported = await app.usage("ai-toolbox", "antigravity/model");
+	assert.equal(unsupported.body.kind, "unavailable");
+	assert.equal(unsupported.body.reason, "model-unsupported");
+	delete app.map.AI_TOOLBOX_API_KEY;
+	assert.equal((await app.usage("ai-toolbox", "loomy/model")).body.reason, "missing-credential");
+	assert.equal(app.requests.length, 3);
+	assert.ok(app.requests.every((request) => request.url === "http://127.0.0.1:7863/panel/api/overview" && request.auth === "Bearer toolbox-test"));
+	assert.ok(!workbuddy.raw.includes("toolbox-test"));
 });
 
 test("provider cache coalesces reads and isolates models, providers and credential changes", async () => {

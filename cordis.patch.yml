@@ -3,4 +3,4 @@
 # The module name must match package.json, not the legacy entry id.
 - insert:
     - id: dsh-opencode-go-usage
-      name: "dsh-usage-meter"
+      name: "@gl070900/dsh-usage-meter"

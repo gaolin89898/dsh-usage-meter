@@ -2,7 +2,7 @@
 
 **[dsh-usage-meter](https://github.com/gaolin89898/dsh-usage-meter)** 是 [DSH](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）的侧边栏小组件：跟随会话当前所用服务，实时显示对应的额度或余额——OpenCode GO 的 5 小时 / 周 / 月用量窗口，MiniMax 的滚动与周用量，DeepSeek / OpenRouter / Moonshot 的可用余额。每条用量条下再叠一条时间条——额度花得快还是慢，一眼可见。
 
-`DSH ≥ 0.1.7` · `MIT License` · `● v1.0.1`
+`DSH ≥ 0.1.7` · `MIT License` · `● v1.1.0`
 
 第一次装 DSH 插件？直接看[使用者指南](docs/INSTALL.zh.md)，一步步照做即可。
 
@@ -27,7 +27,7 @@ $ dsh web
 
 也可以从 [v1.0.1 Release](https://github.com/gaolin89898/dsh-usage-meter/releases/tag/v1.0.1) 下载 `dsh-usage-meter-1.0.1.tgz`，执行 `dsh plugin --profile web add ./dsh-usage-meter-1.0.1.tgz` 安装。npm 上的同名包属于其他项目，请使用本仓库的安装包或源码目录。
 
-升级旧版本：本地目录安装的用户先更新源码，再对同一目录执行安装命令。包名已改为 `dsh-usage-meter`，配置 entry id 保持不变；请确认插件面板只启用一份用量组件，完整退出 DSH 后再启动并硬刷新。
+升级旧版本：本地目录安装的用户先更新源码，再对同一目录执行安装命令。包名已改为 `@gl070900/dsh-usage-meter`，配置 entry id 保持不变；请确认插件面板只启用一份用量组件，完整退出 DSH 后再启动并硬刷新。
 
 1. **安装到 web profile** —— `--profile web` 添加本地目录（desktop 同理，换成你实际用的 profile 名）；依赖 pnpm，没有就先 `corepack enable`。`dsh plugin add` 会自动把包的 `dsh.bundle.patch` 合并进 profile 的 bundle 层栈，不需要手改 cordis.patch.yml，也不需要软链。
 2. **写入 API key** —— 在 `~/.dsh/.credentials.yaml` 里加一行 `OPENCODE_GO_API_KEY: sk-...`，key 在 [opencode.ai/auth](https://opencode.ai/auth) 创建。即使走默认的 `dsh-opencode-go` 来源也要配好这一步：一旦回退到内置提供商，用的正是这个 credential。
@@ -65,7 +65,11 @@ $ dsh web
 | DeepSeek API · 登录账号 | 按币种显示可用余额；登录账号合计充值与赠送钱包 | ○ 内置 |
 | OpenRouter | 总充值减去已用金额 | ○ 内置 |
 | Moonshot 国内 · 国际 | 可用余额 | ○ 内置 |
+| AI 工具箱网关 | 按会话模型前缀聚合对应平台积分，折算额度使用百分比 | ○ 内置 |
 | 其他服务 · 自定义代理 | 提示暂不支持查询 | — |
+
+AI 工具箱网关（workbuddy2api-panel）联动：供应商选 `ai-toolbox` 时按会话模型前缀显示对应平台的积分使用百分比。
+密钥复用 `AI_TOOLBOX_API_KEY`（由 dsh-workbuddy-accounts 自动写入 DSH 凭证库），请求仅在 Host 进程访问本机网关。
 
 来源图例：**● 双来源** = 可经 `dsh-opencode-go` 插件或内置提供商两条路径查询（见 [04 额度来源与回退](#04-额度来源与回退)）；**○ 内置** = 本插件按该服务自己的接口直连（见 [HTTP 接口](#http-接口)）；**—** = 无查询路径。
 
@@ -111,7 +115,7 @@ $ dsh web
 
 ### 设置页
 
-插件在 DSH 官方 **`plugins.bundle.config`** 槽位注册了配置页，以包名为 key：**侧栏 →「插件」面板 → `dsh-usage-meter` 卡片 → 配置页**。
+插件在 DSH 官方 **`plugins.bundle.config`** 槽位注册了配置页，以包名为 key：**侧栏 →「插件」面板 → `@gl070900/dsh-usage-meter` 卡片 → 配置页**。
 
 页面提供：
 
@@ -246,7 +250,7 @@ dsh plugin allow-version     # 为 name@version 在本 dsh 版本上授予精确
 node -e "const fs=require('fs');fs.mkdirSync('node_modules/@deepseek-ai',{recursive:true});fs.symlinkSync(process.env.USERPROFILE+'/.dsh/profiles/<profile>/node_modules/@deepseek-ai/schemastery','node_modules/@deepseek-ai/schemastery','junction')"
 ```
 
-`node_modules/` 已在 `.gitignore` 中，不会进入仓库。验证：`node --input-type=module -e "await import('dsh-usage-meter')"`（在 profile 目录执行）。
+`node_modules/` 已在 `.gitignore` 中，不会进入仓库。验证：`node --input-type=module -e "await import('@gl070900/dsh-usage-meter')"`（在 profile 目录执行）。
 
 ## 常见问题
 
