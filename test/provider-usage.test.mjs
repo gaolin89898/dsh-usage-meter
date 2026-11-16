@@ -80,12 +80,16 @@ test("unsupported routes, custom proxies and missing credentials never fall back
 	assert.equal(app.requests.length, 0);
 });
 
-test("AI Toolbox aggregates credits by model prefix and keeps credentials in the host", async () => {
+test("AI Toolbox returns remaining credits without percentage conversion", async () => {
 	const app = boot();
 	const workbuddy = await app.usage("ai-toolbox", "cn:glm-5.3");
 	assert.equal(workbuddy.body.provider.name, "AI 工具箱网关");
-	assert.equal(workbuddy.body.usage.monthly.percent, 55.73);
-	assert.equal((await app.usage("ai-toolbox", "doubao/doubao")).body.usage.monthly.percent, 2.34);
+	assert.equal(workbuddy.body.kind, "credits");
+	assert.deepEqual(workbuddy.body.credits, { remaining: 4604, total: 10400 });
+	assert.equal(workbuddy.body.usage, undefined);
+	const doubao = await app.usage("ai-toolbox", "doubao/doubao");
+	assert.deepEqual(doubao.body.credits, { remaining: 4004, total: 4100 });
+	assert.equal(doubao.body.usage, undefined);
 	const unsupported = await app.usage("ai-toolbox", "antigravity/model");
 	assert.equal(unsupported.body.kind, "unavailable");
 	assert.equal(unsupported.body.reason, "model-unsupported");

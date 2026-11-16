@@ -277,6 +277,18 @@ test("monetary balances and unsupported providers do not render GO quota", () =>
 	assert.equal(renderWidget({ selection: null }).find("ocg-state-title")[0].props.children, "widget.no-selection");
 });
 
+test("AI Toolbox displays credits as numbers without percentage or quota meters", () => {
+	const data = { kind: "credits", provider: { id: "ai-toolbox", name: "AI 工具箱网关" }, credits: { remaining: 4604, total: 10400 } };
+	const view = renderWidget({ data });
+	assert.equal(view.find("ocg-monthly-value")[0].props.children, "4,604");
+	assert.equal(view.find("ocg-countdown")[0].props.children, 'widget.credits.total{"total":"10,400"}');
+	assert.equal(view.find("ocg-meter").length, 0);
+	assert.ok(!view.text.includes("%"));
+	const rail = renderWidget({ data, wide: false });
+	assert.equal(rail.find("ocg-rail-value")[0].props.children, "4,604");
+	assert.ok(!rail.text.includes("%"));
+});
+
 test("MiniMax displays only available windows and identifies the provider in the rail", () => {
 	const data = { kind: "quota", provider: { id: "minimax-cn", name: "MiniMax" }, usage: { rolling: { percent: 25 }, weekly: { percent: 10 } } };
 	const view = renderWidget({ data });
