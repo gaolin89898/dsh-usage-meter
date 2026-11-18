@@ -1,7 +1,7 @@
 {
   "name": "@gl070900/dsh-usage-meter",
-  "version": "1.1.0",
-  "description": "DSH sidebar usage meter for OpenCode GO, MiniMax, DeepSeek, OpenRouter and Moonshot, with usage windows, balances and a Plugins-panel settings page (DSH 0.1.7+ and 0.2.x).",
+  "version": "1.1.1",
+  "description": "DSH sidebar usage meter for OpenCode GO, MiniMax, DeepSeek, OpenRouter, Moonshot and Magpie, with usage windows, balances and a Plugins-panel settings page (DSH 0.1.7+ and 0.2.x).",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
@@ -21,6 +21,7 @@
     "deepseek-harness",
     "opencode",
     "opencode-go",
+    "magpie",
     "usage",
     "quota",
     "plugin",

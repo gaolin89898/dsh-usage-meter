@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createProviderUsage, normalizeMiniMax } from "../lib/provider-usage.js";
+import { createProviderUsage, normalizeMagpie, normalizeMiniMax } from "../lib/provider-usage.js";
 import { callRoute, credentials, jsonResponse, loadHost, makeCtx, usagePayload } from "./support/harness.mjs";
 
 const host = await loadHost();
@@ -11,6 +11,22 @@ const overviewPayload = {
 	minimax_accounts: [{ credits: 4424 }],
 	trae_accounts: [], qoder_accounts: [], loomy_accounts: [], antigravity_accounts: []
 };
+const magpiePayload = {
+	data: [
+		{ provider: "volcengine", name: "Volcengine Ark", windows: [{ name: "5 hours", used: 12.5, remaining: 87.5, display: "39.72 / 10,000", resetsAt: "2026-11-18T13:00:08+08:00" }] },
+		{ provider: "deepseek", name: "DeepSeek", windows: [], balance: "¥45.78" },
+		{ provider: "workbuddy", name: "WorkBuddy", windows: [{ name: "Reward", used: 0, remaining: 100, balance: 200, display: "剩 200 额度" }, { name: "Credits", used: 100, remaining: 0, display: "500 / 500", resetsAt: "2026-11-30T15:59:59Z" }] },
+		{ provider: "trae-cn", name: "Trae CN", user: "林九序", last: true, windows: [{ name: "Credits", used: 77.65, remaining: 22.35, display: "648.29 / 2,900", resetsAt: "2026-11-30T15:59:59Z" }] },
+		{ provider: "trae-cn", name: "Trae CN", user: "林九序二号", windows: [{ name: "Credits", used: 0, remaining: 100, display: "0 / 2,300", resetsAt: "2026-11-30T15:59:59Z" }] }
+	]
+};
+const magpieUsagePayload = {
+	rows: [
+		{ t: "2026-11-18T04:00:00Z", provider: "workbuddy", providerAccount: "林九序", session: "session-other" },
+		{ t: "2026-11-18T03:00:00Z", provider: "trae-cn", providerAccount: "林九序二号", session: "session-live" },
+		{ t: "2026-11-18T02:00:00Z", provider: "trae-cn", providerAccount: "林九序", session: "session-live" }
+	]
+};
 
 function boot() {
 	const providers = {
@@ -20,10 +36,11 @@ function boot() {
 		openrouter: { apiKeyEnv: "ROUTER" },
 		"moonshot-cn": { apiKeyEnv: "MOON" },
 		"ai-toolbox": { apiKeyEnv: "AI_TOOLBOX_API_KEY", baseURL: "http://127.0.0.1:7863/v1" },
+		magpie: { apiKeyEnv: "MAGPIE_GATEWAY_KEY", baseURL: "http://127.0.0.1:3425/v1" },
 		"remote-http": { apiKeyEnv: "CUSTOM", baseURL: "http://example.com/v1" },
 		custom: { apiKeyEnv: "CUSTOM", baseURL: "https://example.com/v1" }
 	};
-	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MOON: "moon-test", AI_TOOLBOX_API_KEY: "toolbox-test", CUSTOM: "custom-test" };
+	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MOON: "moon-test", AI_TOOLBOX_API_KEY: "toolbox-test", MAGPIE_GATEWAY_KEY: "magpie-test", CUSTOM: "custom-test" };
 	const requests = [];
 	let fail = false;
 	globalThis.fetch = async (url, options) => {
@@ -31,6 +48,8 @@ function boot() {
 		requests.push({ url, auth: new Headers(options.headers).get("authorization") });
 		if (fail) return jsonResponse({ error: "private upstream message" }, 401);
 		if (String(url).includes("coding_plan/remains")) return jsonResponse(miniPayload);
+		if (String(url).includes("/v1/magpie/quotas")) return jsonResponse(magpiePayload);
+		if (String(url).includes("/v1/magpie/usage/requests")) return jsonResponse(magpieUsagePayload);
 		if (String(url).includes("/panel/api/overview")) return jsonResponse(overviewPayload);
 		if (String(url).includes("opencode.ai")) return jsonResponse(usagePayload());
 		if (String(url).includes("deepseek.com")) return jsonResponse({ balance_infos: [{ total_balance: "12.3456", currency: "CNY" }, { total_balance: "0", currency: "USD" }] });
@@ -45,8 +64,8 @@ function boot() {
 	return {
 		...harness, providers, map, requests, config,
 		fail: (value) => { fail = value; },
-		usage: (provider, model = "MiniMax-M2.5") => callRoute(harness.routes, "/opencode-go/usage", {
-			url: "/opencode-go/usage?" + new URLSearchParams({ provider, model })
+		usage: (provider, model = "MiniMax-M2.5", session) => callRoute(harness.routes, "/opencode-go/usage", {
+			url: "/opencode-go/usage?" + new URLSearchParams({ provider, model, ...(session === undefined ? {} : { session }) })
 		})
 	};
 }
@@ -98,6 +117,63 @@ test("AI Toolbox returns remaining credits without percentage conversion", async
 	assert.equal(app.requests.length, 3);
 	assert.ok(app.requests.every((request) => request.url === "http://127.0.0.1:7863/panel/api/overview" && request.auth === "Bearer toolbox-test"));
 	assert.ok(!workbuddy.raw.includes("toolbox-test"));
+});
+
+test("Magpie follows the gateway scope and filters a provider route", async () => {
+	const app = boot();
+	const gateway = await app.usage("magpie", "group/smart-split");
+	assert.equal(gateway.body.kind, "magpie");
+	assert.equal(gateway.body.scope, "gateway");
+	assert.equal(gateway.body.current.name, "Trae CN · 林九序");
+	assert.equal(gateway.body.current.windows[0].percent, 77.65);
+	assert.equal(gateway.body.accounts, undefined);
+	const provider = await app.usage("magpie", "volcengine/ark-code-latest");
+	assert.equal(provider.body.scope, "provider");
+	assert.equal(provider.body.current.name, "Volcengine Ark");
+	assert.equal(provider.body.current.windows[0].percent, 12.5);
+	const unsupported = await app.usage("magpie", "unknown/model");
+	assert.equal(unsupported.body.reason, "model-unsupported");
+	assert.deepEqual(app.requests.map((request) => request.auth), ["Bearer magpie-test", "Bearer magpie-test", "Bearer magpie-test"]);
+	assert.ok(app.requests.every((request) => request.url === "http://127.0.0.1:3425/v1/magpie/quotas"));
+	assert.ok(!JSON.stringify(gateway.body).includes("magpie-test"));
+});
+
+test("Magpie keeps text and balance windows out of percentage meters", () => {
+	const result = normalizeMagpie(magpiePayload, "workbuddy/model");
+	assert.equal(result.current.windows[0].percent, null);
+	assert.equal(result.current.windows[0].detail, "剩 200 额度");
+	assert.equal(result.current.windows[1].percent, 100);
+	const latest = normalizeMagpie({ data: [
+		{ provider: "one", name: "One", lastServedAt: "2026-11-18T01:00:00Z" },
+		{ provider: "two", name: "Two", lastServedAt: "2026-11-18T02:00:00Z" }
+	] }, "group/smart-split");
+	assert.equal(latest.current.name, "Two");
+	const filtered = normalizeMagpie({ data: [
+		{ provider: "one", name: "One" },
+		{ provider: "two", name: "Two", last: true }
+	] }, "one/model");
+	assert.equal(filtered.current.name, "One");
+	const served = normalizeMagpie(magpiePayload, "group/smart-split", { provider: "trae-cn", account: "林九序二号" });
+	assert.equal(served.current.name, "Trae CN · 林九序二号");
+	const aliased = normalizeMagpie({ data: [
+		{ provider: "qoder-cn", name: "Qoder CN", alias: "191****1347" }
+	] }, "group/smart-split", { provider: "qoder-cn", account: "191****1347" });
+	assert.equal(aliased.current.id, "qoder-cn:191****1347");
+	assert.equal(normalizeMagpie({ data: [] }, "group/smart-split").reason, "model-unsupported");
+	assert.throws(() => normalizeMagpie({ data: [{ name: "missing provider" }] }, "group/smart-split"), /Invalid Magpie/);
+});
+
+test("Magpie shows the account that served the session instead of the gateway's last flag", async () => {
+	const app = boot();
+	const served = await app.usage("magpie", "group/smart-split", "session-live");
+	assert.equal(served.body.current.name, "Trae CN · 林九序二号");
+	assert.equal(served.body.current.id, "trae-cn:林九序二号");
+	assert.ok(app.requests.some((request) => request.url === "http://127.0.0.1:3425/v1/magpie/usage/requests?session=session-live"));
+	const unknown = await app.usage("magpie", "group/smart-split", "session-gone");
+	assert.equal(unknown.body.current.name, "Trae CN · 林九序");
+	const invalid = await app.usage("magpie", "group/smart-split", "not a session");
+	assert.equal(invalid.status, 400);
+	assert.equal(invalid.body.error, "Invalid session");
 });
 
 test("provider cache coalesces reads and isolates models, providers and credential changes", async () => {

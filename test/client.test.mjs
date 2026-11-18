@@ -141,7 +141,7 @@ test("host and client agree on the quotaSource values", () => {
 
 function renderWidget({ data = null, error = null, wide = true, selection } = {}) {
 	let cursor = 0;
-	const values = [data, error, 0, false, data ? Date.now() : null];
+	const values = [data, error, 0, false, data ? Date.now() : null, 0];
 	const hooks = { ...installHooks(), useState: () => [values[cursor++], () => {}] };
 	const client = captured.factory((specifier) => specifier === "react" ? hooks : jsxRuntime);
 	const elements = [];
@@ -287,6 +287,37 @@ test("AI Toolbox displays credits as numbers without percentage or quota meters"
 	const rail = renderWidget({ data, wide: false });
 	assert.equal(rail.find("ocg-rail-value")[0].props.children, "4,604");
 	assert.ok(!rail.text.includes("%"));
+});
+
+test("Magpie shows only the current upstream and keeps text windows readable", () => {
+	const data = {
+		kind: "magpie", scope: "gateway", provider: { id: "magpie", name: "Magpie" },
+		current: { id: "volcengine:0", name: "Volcengine Ark", balance: "", failed: false, windows: [{ label: "5 hours", percent: 12.5, detail: "39.72 / 10,000", resetsAt: null }] }
+	};
+	const view = renderWidget({ data });
+	assert.equal(view.find("ocg-name")[0].props.children, "Magpie");
+	assert.equal(view.find("ocg-magpie-single").length, 1);
+	assert.equal(view.find("ocg-magpie-single")[0].props.title, "Volcengine Ark");
+	assert.equal(view.find("ocg-magpie-single")[0].props.children, "Volcengine Ark");
+	assert.equal(view.find("ocg-magpie-trigger").length, 0);
+	assert.ok(!view.elements.some((element) => element.type === "select"));
+	assert.equal(view.find("ocg-row-percent")[0].props.children, "12.5%");
+	assert.equal(view.find("ocg-meter").length, 1);
+	assert.equal(view.find("ocg-magpie-window").length, 1);
+	assert.equal(view.find("ocg-magpie-detail")[0].props.children, "39.72 / 10,000");
+	assert.equal(view.find("ocg-follow").length, 0);
+	assert.equal(renderWidget({ data, wide: false }).find("ocg-rail-value")[0].props.children, "12.5%");
+	const text = renderWidget({ data: { ...data, scope: "provider", current: {
+		id: "workbuddy:0", name: "WorkBuddy", balance: "", failed: false,
+		windows: [{ label: "Reward", percent: null, detail: "剩 200 额度", resetsAt: null }]
+	} } });
+	assert.equal(text.find("ocg-magpie-value")[0].props.children, "剩 200 额度");
+	const failed = renderWidget({ data: { ...data, current: { ...data.current, failed: true } } });
+	assert.equal(failed.find("ocg-state-title")[0].props.children, "widget.error");
+	const negative = renderWidget({ data: { ...data, current: {
+		id: "my-codex:0", name: "My Codex", balance: "$-992.36", failed: false, windows: []
+	} } });
+	assert.equal(negative.find("ocg-balance-value")[0].props["data-level"], "error");
 });
 
 test("MiniMax displays only available windows and identifies the provider in the rail", () => {

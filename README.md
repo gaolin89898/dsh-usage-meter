@@ -1,6 +1,6 @@
 # 把额度放进侧边栏
 
-**[dsh-usage-meter](https://github.com/gaolin89898/dsh-usage-meter)** 是 [DSH](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）的侧边栏小组件：跟随会话当前所用服务，实时显示对应的额度或余额——OpenCode GO 的 5 小时 / 周 / 月用量窗口，MiniMax 的滚动与周用量，DeepSeek / OpenRouter / Moonshot 的可用余额。每条用量条下再叠一条时间条——额度花得快还是慢，一眼可见。
+**[dsh-usage-meter](https://github.com/gaolin89898/dsh-usage-meter)** 是 [DSH](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）的侧边栏小组件：跟随会话当前所用服务，实时显示对应的额度或余额——OpenCode GO 的 5 小时 / 周 / 月用量窗口，MiniMax 的滚动与周用量，DeepSeek / OpenRouter / Moonshot 的可用余额，以及 Magpie 各上游账号的套餐与余额。每条用量条下再叠一条时间条——额度花得快还是慢，一眼可见。
 
 `DSH ≥ 0.1.7` · `MIT License` · `● v1.1.1`
 
@@ -65,15 +65,18 @@ $ dsh web
 | DeepSeek API · 登录账号 | 按币种显示可用余额；登录账号合计充值与赠送钱包 | ○ 内置 |
 | OpenRouter | 总充值减去已用金额 | ○ 内置 |
 | Moonshot 国内 · 国际 | 可用余额 | ○ 内置 |
+| Magpie | 当前上游账号的余额与用量窗口；`group/*` 模型跟随本会话真正被服务的账号 | ○ 内置 |
 | AI 工具箱网关 | 按会话模型前缀聚合对应平台的剩余积分与总积分 | ○ 内置 |
 | 其他服务 · 自定义代理 | 提示暂不支持查询 | — |
 
 AI 工具箱网关（workbuddy2api-panel）联动：供应商选 `ai-toolbox` 时按会话模型前缀显示对应平台的剩余积分和总积分，不折算百分比。
 密钥复用 `AI_TOOLBOX_API_KEY`（由 dsh-workbuddy-accounts 自动写入 DSH 凭证库），请求仅在 Host 进程访问本机网关。
 
+Magpie 联动：供应商选 `magpie` 时读取 `GET /v1/magpie/quotas`，密钥引用 `MAGPIE_GATEWAY_KEY`。只展示 Magpie 当前使用的账号，不提供账号切换：`group/*` 模型按会话 id 从 `/v1/magpie/usage/requests` 里匹配出真正服务该会话的上游账号，取不到时回退到接口标记为 `last`（或最近使用时间最新）的账号；普通 `provider/model` 在该上游内取当前账号。余额按上游返回的币种或积分原样展示，套餐窗口显示已用百分比。
+
 来源图例：**● 双来源** = 可经 `dsh-opencode-go` 插件或内置提供商两条路径查询（见 [04 额度来源与回退](#04-额度来源与回退)）；**○ 内置** = 本插件按该服务自己的接口直连（见 [HTTP 接口](#http-接口)）；**—** = 无查询路径。
 
-小组件通过 `GET /opencode-go/usage?provider=<服务路由>&model=<模型>` 查询。Host 根据当前服务的实时配置解析凭据，不按模型名称猜测服务；缓存按服务、模型、凭据分别隔离。未配置凭据、未登录、接口失败各有对应状态——小组件显示对应状态，而不是空白。
+小组件通过 `GET /opencode-go/usage?provider=<服务路由>&model=<模型>&session=<会话 id>` 查询，`session` 可选（仅 Magpie 用它定位当前账号）。Host 根据当前服务的实时配置解析凭据，不按模型名称猜测服务；缓存按服务、模型、会话、凭据分别隔离。未配置凭据、未登录、接口失败各有对应状态——小组件显示对应状态，而不是空白。
 
 `llm-pi-ai` 配置的 GO 路由优先使用该路由自己的凭据；仅当它与额度来源中的账号及网关一致时才复用原有 GO 来源设置。旧版 DSH（没有模型选择服务）、不带查询参数的请求以及 `/opencode-go` 命令，继续使用原有 GO 来源配置。
 
