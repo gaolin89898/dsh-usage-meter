@@ -163,6 +163,14 @@ test("Magpie keeps text and balance windows out of percentage meters", () => {
 	assert.throws(() => normalizeMagpie({ data: [{ name: "missing provider" }] }, "group/smart-split"), /Invalid Magpie/);
 });
 
+test("Magpie hides token-usage estimate windows", () => {
+	const result = normalizeMagpie({ data: [{ provider: "workbuddy", name: "WorkBuddy", windows: [
+		{ name: "Credits", used: 100, remaining: 0, display: "500 / 500" },
+		{ name: "deepseek-v4.1-flash tokens (est.)", used: 9.52, remaining: 90.48, display: "19.0M / ~200M" }
+	] }] }, "workbuddy/model");
+	assert.deepEqual(result.current.windows.map((win) => win.label), ["Credits"]);
+});
+
 test("Magpie shows the account that served the session instead of the gateway's last flag", async () => {
 	const app = boot();
 	const served = await app.usage("magpie", "group/smart-split", "session-live");
