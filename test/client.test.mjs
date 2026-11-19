@@ -320,6 +320,23 @@ test("Magpie shows only the current upstream and keeps text windows readable", (
 	assert.equal(negative.find("ocg-balance-value")[0].props["data-level"], "error");
 });
 
+test("Magpie window names are translated instead of showing the gateway English", () => {
+	const data = {
+		kind: "magpie", scope: "provider", provider: { id: "magpie", name: "Magpie" },
+		current: { id: "workbuddy:0", name: "WorkBuddy · 林九序", balance: "", failed: false, windows: [
+			{ label: "Credits", percent: 100, detail: "500 / 500", resetsAt: null },
+			{ label: "Extra credits", percent: 38.78, detail: "1776.69 / 4582", resetsAt: null },
+			{ label: "Total credits", percent: 44.8, detail: "2276.69 / 5082", resetsAt: null },
+			{ label: "deepseek-v4.1-flash tokens (est.)", percent: 4.04, detail: "8.1M / ~200M", resetsAt: null }
+		] }
+	};
+	const view = renderWidget({ data });
+	assert.deepEqual(view.find("ocg-row-label").map((el) => el.props.children), [
+		"magpie.label.credits", "magpie.label.extra", "magpie.label.total", 'magpie.label.tokens{"model":"deepseek-v4.1-flash"}'
+	]);
+	assert.ok(!view.text.includes("Extra credits"));
+});
+
 test("MiniMax displays only available windows and identifies the provider in the rail", () => {
 	const data = { kind: "quota", provider: { id: "minimax-cn", name: "MiniMax" }, usage: { rolling: { percent: 25 }, weekly: { percent: 10 } } };
 	const view = renderWidget({ data });
