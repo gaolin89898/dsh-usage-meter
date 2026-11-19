@@ -292,7 +292,7 @@ test("AI Toolbox displays credits as numbers without percentage or quota meters"
 test("Magpie shows only the current upstream and keeps text windows readable", () => {
 	const data = {
 		kind: "magpie", scope: "gateway", provider: { id: "magpie", name: "Magpie" },
-		current: { id: "volcengine:0", name: "Volcengine Ark", balance: "", failed: false, windows: [{ label: "5 hours", percent: 12.5, detail: "39.72 / 10,000", resetsAt: null }] }
+		current: { id: "volcengine:0", name: "Volcengine Ark", balance: "", failed: false, windows: [{ label: "5 hours", percent: 87.5, detail: "9,960.28 / 10,000", resetsAt: null, remaining: true }] }
 	};
 	const view = renderWidget({ data });
 	assert.equal(view.find("ocg-name")[0].props.children, "Magpie");
@@ -301,12 +301,13 @@ test("Magpie shows only the current upstream and keeps text windows readable", (
 	assert.equal(view.find("ocg-magpie-single")[0].props.children, "Volcengine Ark");
 	assert.equal(view.find("ocg-magpie-trigger").length, 0);
 	assert.ok(!view.elements.some((element) => element.type === "select"));
-	assert.equal(view.find("ocg-row-percent")[0].props.children, "12.5%");
+	assert.equal(view.find("ocg-row-percent")[0].props.children, "87.5%");
+	assert.equal(view.find("ocg-row-percent")[0].props["data-level"], "normal");
 	assert.equal(view.find("ocg-meter").length, 1);
 	assert.equal(view.find("ocg-magpie-window").length, 1);
-	assert.equal(view.find("ocg-magpie-detail")[0].props.children, "39.72 / 10,000");
+	assert.equal(view.find("ocg-magpie-detail")[0].props.children, "9,960.28 / 10,000");
 	assert.equal(view.find("ocg-follow").length, 0);
-	assert.equal(renderWidget({ data, wide: false }).find("ocg-rail-value")[0].props.children, "12.5%");
+	assert.equal(renderWidget({ data, wide: false }).find("ocg-rail-value")[0].props.children, "87.5%");
 	const text = renderWidget({ data: { ...data, scope: "provider", current: {
 		id: "workbuddy:0", name: "WorkBuddy", balance: "", failed: false,
 		windows: [{ label: "Reward", percent: null, detail: "剩 200 额度", resetsAt: null }]

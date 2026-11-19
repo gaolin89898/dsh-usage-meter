@@ -125,12 +125,12 @@ test("Magpie follows the gateway scope and filters a provider route", async () =
 	assert.equal(gateway.body.kind, "magpie");
 	assert.equal(gateway.body.scope, "gateway");
 	assert.equal(gateway.body.current.name, "Trae CN · 林九序");
-	assert.equal(gateway.body.current.windows[0].percent, 77.65);
+	assert.equal(gateway.body.current.windows[0].percent, 22.35);
 	assert.equal(gateway.body.accounts, undefined);
 	const provider = await app.usage("magpie", "volcengine/ark-code-latest");
 	assert.equal(provider.body.scope, "provider");
 	assert.equal(provider.body.current.name, "Volcengine Ark");
-	assert.equal(provider.body.current.windows[0].percent, 12.5);
+	assert.equal(provider.body.current.windows[0].percent, 87.5);
 	const unsupported = await app.usage("magpie", "unknown/model");
 	assert.equal(unsupported.body.reason, "model-unsupported");
 	assert.deepEqual(app.requests.map((request) => request.auth), ["Bearer magpie-test", "Bearer magpie-test", "Bearer magpie-test"]);
@@ -142,7 +142,7 @@ test("Magpie keeps text and balance windows out of percentage meters", () => {
 	const result = normalizeMagpie(magpiePayload, "workbuddy/model");
 	assert.equal(result.current.windows[0].percent, null);
 	assert.equal(result.current.windows[0].detail, "剩 200 额度");
-	assert.equal(result.current.windows[1].percent, 100);
+	assert.equal(result.current.windows[1].percent, 0);
 	const latest = normalizeMagpie({ data: [
 		{ provider: "one", name: "One", lastServedAt: "2026-11-18T01:00:00Z" },
 		{ provider: "two", name: "Two", lastServedAt: "2026-11-18T02:00:00Z" }
@@ -161,6 +161,16 @@ test("Magpie keeps text and balance windows out of percentage meters", () => {
 	assert.equal(aliased.current.id, "qoder-cn:191****1347");
 	assert.equal(normalizeMagpie({ data: [] }, "group/smart-split").reason, "model-unsupported");
 	assert.throws(() => normalizeMagpie({ data: [{ name: "missing provider" }] }, "group/smart-split"), /Invalid Magpie/);
+});
+
+test("Magpie reports remaining credits instead of used amounts", () => {
+	const result = normalizeMagpie({ data: [{ provider: "workbuddy", name: "WorkBuddy", windows: [
+		{ name: "Credits", used: 100, amount: 500, limit: 500, display: "500 / 500" },
+		{ name: "Extra credits", used: 45.34, amount: 2077.59, limit: 4582, display: "2077.59 / 4582" },
+		{ name: "Total credits", used: 50.72, amount: 2577.59, limit: 5082, display: "2577.59 / 5082" }
+	] }] }, "workbuddy/model");
+	assert.deepEqual(result.current.windows.map((win) => win.percent), [0, 54.66, 49.28]);
+	assert.deepEqual(result.current.windows.map((win) => win.detail), ["0 / 500", "2,504.41 / 4,582", "2,504.41 / 5,082"]);
 });
 
 test("Magpie hides token-usage estimate windows", () => {
