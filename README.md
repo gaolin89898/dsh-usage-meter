@@ -2,7 +2,7 @@
 
 **[dsh-usage-meter](https://github.com/gaolin89898/dsh-usage-meter)** 是 [DSH](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）的侧边栏小组件：跟随会话当前所用服务，实时显示对应的额度或余额——OpenCode GO 的 5 小时 / 周 / 月用量窗口，MiniMax 的滚动与周用量，DeepSeek / OpenRouter / Moonshot 的可用余额，以及 Magpie 各上游账号的套餐与余额。每条用量条下再叠一条时间条——额度花得快还是慢，一眼可见。
 
-`DSH ≥ 0.1.7` · `MIT License` · `● v1.1.2`
+`DSH ≥ 0.1.7` · `MIT License` · `● v1.1.3`
 
 第一次装 DSH 插件？直接看[使用者指南](docs/INSTALL.zh.md)，一步步照做即可。
 
