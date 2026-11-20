@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createProviderUsage, normalizeMagpie, normalizeMiniMax } from "../lib/provider-usage.js";
+import { createProviderUsage, normalizeArkPlan, normalizeMagpie, normalizeMiniMax, signVolcengine } from "../lib/provider-usage.js";
 import { callRoute, credentials, jsonResponse, loadHost, makeCtx, usagePayload } from "./support/harness.mjs";
 
 const host = await loadHost();
@@ -10,6 +10,14 @@ const overviewPayload = {
 	doubao_accounts: [{ credits: 4004, credits_total: 4100, plan: "标准套餐" }],
 	minimax_accounts: [{ credits: 4424 }],
 	trae_accounts: [], qoder_accounts: [], loomy_accounts: [], antigravity_accounts: []
+};
+const arkPayload = {
+	ResponseMetadata: { Action: "GetAFPUsage", RequestId: "test" },
+	Result: {
+		AFPFiveHour: { Used: "427.1357", Quota: "10000", ResetTime: 1795000000000 },
+		AFPWeekly: { Used: "5399.7071", Quota: "35000", ResetTime: 1795400000000 },
+		AFPMonthly: { Used: "5709.7071", Quota: "100000", ResetTime: 1797500000000 }
+	}
 };
 const magpiePayload = {
 	data: [
@@ -37,10 +45,11 @@ function boot() {
 		"moonshot-cn": { apiKeyEnv: "MOON" },
 		"ai-toolbox": { apiKeyEnv: "AI_TOOLBOX_API_KEY", baseURL: "http://127.0.0.1:7863/v1" },
 		magpie: { apiKeyEnv: "MAGPIE_GATEWAY_KEY", baseURL: "http://127.0.0.1:3425/v1" },
+		volcengine: { apiKeyEnv: "VOLC_ACCESS_KEY" },
 		"remote-http": { apiKeyEnv: "CUSTOM", baseURL: "http://example.com/v1" },
 		custom: { apiKeyEnv: "CUSTOM", baseURL: "https://example.com/v1" }
 	};
-	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MOON: "moon-test", AI_TOOLBOX_API_KEY: "toolbox-test", MAGPIE_GATEWAY_KEY: "magpie-test", CUSTOM: "custom-test" };
+	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MOON: "moon-test", AI_TOOLBOX_API_KEY: "toolbox-test", MAGPIE_GATEWAY_KEY: "magpie-test", VOLC_ACCESS_KEY: "volc-ak", VOLC_SECRET_KEY: "volc-sk", CUSTOM: "custom-test" };
 	const requests = [];
 	let fail = false;
 	globalThis.fetch = async (url, options) => {
@@ -51,6 +60,7 @@ function boot() {
 		if (String(url).includes("/v1/magpie/quotas")) return jsonResponse(magpiePayload);
 		if (String(url).includes("/v1/magpie/usage/requests")) return jsonResponse(magpieUsagePayload);
 		if (String(url).includes("/panel/api/overview")) return jsonResponse(overviewPayload);
+		if (String(url).includes("open.volcengineapi.com")) return jsonResponse(arkPayload);
 		if (String(url).includes("opencode.ai")) return jsonResponse(usagePayload());
 		if (String(url).includes("deepseek.com")) return jsonResponse({ balance_infos: [{ total_balance: "12.3456", currency: "CNY" }, { total_balance: "0", currency: "USD" }] });
 		if (String(url).includes("openrouter.ai")) return jsonResponse({ data: { total_credits: 10, total_usage: 3.5 } });
@@ -117,6 +127,42 @@ test("AI Toolbox returns remaining credits without percentage conversion", async
 	assert.equal(app.requests.length, 3);
 	assert.ok(app.requests.every((request) => request.url === "http://127.0.0.1:7863/panel/api/overview" && request.auth === "Bearer toolbox-test"));
 	assert.ok(!workbuddy.raw.includes("toolbox-test"));
+});
+
+test("Volcengine signature follows the SDK canonical form", () => {
+	const signed = signVolcengine({ accessKey: "ak", secretKey: "sk", now: Date.UTC(2026, 10, 20, 0, 40, 0) });
+	assert.equal(signed.xDate, "20261120T004000Z");
+	assert.equal(signed.query, "Action=GetAFPUsage&Version=2024-01-01");
+	assert.equal(signed.contentSha, "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a");
+	assert.match(signed.authorization, /^HMAC-SHA256 Credential=ak\/20261120\/cn-beijing\/ark\/request, SignedHeaders=content-type;host;x-content-sha256;x-date, Signature=[0-9a-f]{64}$/);
+});
+
+test("Volcengine Agent Plan reads AFP windows from the signed control plane", async () => {
+	const app = boot();
+	const id = "cc-switch-agentplan";
+	app.providers[id] = { baseURL: "https://ark.cn-beijing.volces.com/api/plan/v3/", displayName: "火山 Agent Plan", apiKeyEnv: "custom-inference-key" };
+	const plan = await app.usage(id);
+	assert.equal(plan.body.kind, "quota");
+	assert.deepEqual(plan.body.provider, { id, name: "火山 Agent Plan", brand: "volcengine" });
+	assert.deepEqual(Object.keys(plan.body.usage), ["rolling", "weekly", "monthly"]);
+	assert.equal(plan.body.usage.rolling.percent, 95.73);
+	assert.equal(plan.body.usage.rolling.detail, "9,572.86 / 10,000");
+	assert.equal(plan.body.usage.rolling.resetsAt, new Date(1795000000000).toISOString());
+	const request = app.requests.at(-1);
+	assert.ok(request.url.startsWith("https://open.volcengineapi.com/?Action=GetAFPUsage&Version=2024-01-01"));
+	assert.match(request.auth, /^HMAC-SHA256 Credential=volc-ak\/\d{8}\/cn-beijing\/ark\/request, SignedHeaders=content-type;host;x-content-sha256;x-date, Signature=[0-9a-f]{64}$/);
+	assert.ok(!JSON.stringify(plan.body).includes("volc-sk"));
+	delete app.map.VOLC_SECRET_KEY;
+	assert.equal((await app.usage("volcengine")).body.reason, "missing-credential");
+});
+
+test("Ark plan rejects lookalikes and non-plan endpoints even with a familiar route id", async () => {
+	const app = boot();
+	for (const baseURL of ["https://example.com/api/plan/v3", "https://ark.cn-beijing.volces.com/api/coding/v3", "https://ark.cn-beijing.volces.com/api/v3", "http://ark.cn-beijing.volces.com/api/plan/v3", "https://user@ark.cn-beijing.volces.com/api/plan/v3"]) {
+		app.providers.volcengine.baseURL = baseURL;
+		assert.equal((await app.usage("volcengine")).body.reason, "unsupported");
+	}
+	assert.equal(app.requests.length, 0);
 });
 
 test("Magpie follows the gateway scope and filters a provider route", async () => {

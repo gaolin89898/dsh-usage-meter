@@ -297,8 +297,9 @@ test("Magpie shows only the current upstream and keeps text windows readable", (
 	const view = renderWidget({ data });
 	assert.equal(view.find("ocg-name")[0].props.children, "Magpie");
 	assert.equal(view.find("ocg-magpie-single").length, 1);
-	assert.equal(view.find("ocg-magpie-single")[0].props.title, "Volcengine Ark");
-	assert.equal(view.find("ocg-magpie-single")[0].props.children, "Volcengine Ark");
+	assert.equal(view.find("ocg-magpie-single")[0].props.title, "magpie.provider.ark");
+	assert.equal(view.find("ocg-row-label")[0].props.children, "magpie.label.hours5");
+	assert.equal(view.find("ocg-magpie-single")[0].props.children, "magpie.provider.ark");
 	assert.equal(view.find("ocg-magpie-trigger").length, 0);
 	assert.ok(!view.elements.some((element) => element.type === "select"));
 	assert.equal(view.find("ocg-row-percent")[0].props.children, "87.5%");
@@ -328,14 +329,45 @@ test("Magpie window names are translated instead of showing the gateway English"
 			{ label: "Credits", percent: 100, detail: "500 / 500", resetsAt: null },
 			{ label: "Extra credits", percent: 38.78, detail: "1776.69 / 4582", resetsAt: null },
 			{ label: "Total credits", percent: 44.8, detail: "2276.69 / 5082", resetsAt: null },
+			{ label: "Add-on credits", percent: 83.47, detail: "1,586 / 1,900", resetsAt: null },
 			{ label: "deepseek-v4.1-flash tokens (est.)", percent: 4.04, detail: "8.1M / ~200M", resetsAt: null }
 		] }
 	};
 	const view = renderWidget({ data });
 	assert.deepEqual(view.find("ocg-row-label").map((el) => el.props.children), [
-		"magpie.label.credits", "magpie.label.extra", "magpie.label.total", 'magpie.label.tokens{"model":"deepseek-v4.1-flash"}'
+		"magpie.label.credits", "magpie.label.extra", "magpie.label.total", "magpie.label.addon", 'magpie.label.tokens{"model":"deepseek-v4.1-flash"}'
 	]);
 	assert.ok(!view.text.includes("Extra credits"));
+});
+
+test("Ark routes render the shared subscription layout with remaining amounts", () => {
+	const data = { kind: "quota", provider: { id: "cc-switch-agentplan", brand: "volcengine", name: "火山 Agent Plan" }, usage: {
+		monthly: { percent: 93.67, detail: "93,665.38 / 100,000", remaining: true },
+		rolling: { percent: 9, detail: "900 / 10,000", remaining: true },
+		weekly: { percent: 82.79, remaining: true }
+	} };
+	const view = renderWidget({ data });
+	assert.equal(view.find("ocg-name")[0].props.children, "火山 Agent Plan");
+	assert.equal(view.find("ocg-monthly-value")[0].props.children, 'quota.remaining{"pct":93.67}');
+	assert.equal(view.find("ocg-monthly-value")[0].props["data-level"], "normal");
+	assert.equal(view.find("ocg-row-percent")[0].props["data-level"], "error");
+	assert.equal(view.find("ocg-row").length, 2);
+	assert.equal(view.find("ocg-meter").length, 3);
+	assert.equal(view.find("ocg-magpie-single").length, 0);
+	assert.ok(view.text.includes("93,665.38 / 100,000"));
+	assert.equal(renderWidget({ data, wide: false }).find("ocg-rail-value")[0].props.children, "93.67%");
+});
+
+test("Magpie provider names are localized with the account suffix kept", () => {
+	const data = {
+		kind: "magpie", scope: "provider", provider: { id: "magpie", name: "Magpie" },
+		current: { id: "qoder-cn:1", name: "Qoder CN · 191****1347", balance: "", failed: false, windows: [{ label: "Add-on credits", percent: 83.47, detail: "1,586 / 1,900", resetsAt: null }] }
+	};
+	const view = renderWidget({ data });
+	assert.equal(view.find("ocg-magpie-single")[0].props.children, "magpie.provider.qoder · 191****1347");
+	assert.equal(view.find("ocg-row-label")[0].props.children, "magpie.label.addon");
+	const rail = renderWidget({ data, wide: false });
+	assert.ok(rail.find("ocg-rail")[0].props.title.includes("magpie.provider.qoder · 191****1347"));
 });
 
 test("MiniMax displays only available windows and identifies the provider in the rail", () => {
