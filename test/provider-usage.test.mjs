@@ -5,12 +5,6 @@ import { callRoute, credentials, jsonResponse, loadHost, makeCtx, usagePayload }
 
 const host = await loadHost();
 const miniPayload = { model_remains: [{ model_name: "MiniMax-M2.5", current_interval_remaining_percent: 75, current_weekly_remaining_percent: 90, end_time: 1800000000000 }] };
-const overviewPayload = {
-	accounts: [{ nickname: "one", credits: 2540, credits_total: 6300, realm: "cn" }, { nickname: "two", credits: 2064, credits_total: 4100, realm: "global" }],
-	doubao_accounts: [{ credits: 4004, credits_total: 4100, plan: "标准套餐" }],
-	minimax_accounts: [{ credits: 4424 }],
-	trae_accounts: [], qoder_accounts: [], loomy_accounts: [], antigravity_accounts: []
-};
 const arkPayload = {
 	ResponseMetadata: { Action: "GetAFPUsage", RequestId: "test" },
 	Result: {
@@ -42,14 +36,12 @@ function boot() {
 		"minimax-cn": { apiKeyEnv: "MINI", displayName: "MiniMax" },
 		deepseek: { apiKeyEnv: "DEEP" },
 		openrouter: { apiKeyEnv: "ROUTER" },
-		"moonshot-cn": { apiKeyEnv: "MOON" },
-		"ai-toolbox": { apiKeyEnv: "AI_TOOLBOX_API_KEY", baseURL: "http://127.0.0.1:7863/v1" },
 		magpie: { apiKeyEnv: "MAGPIE_GATEWAY_KEY", baseURL: "http://127.0.0.1:3425/v1" },
 		volcengine: { apiKeyEnv: "VOLC_ACCESS_KEY" },
 		"remote-http": { apiKeyEnv: "CUSTOM", baseURL: "http://example.com/v1" },
 		custom: { apiKeyEnv: "CUSTOM", baseURL: "https://example.com/v1" }
 	};
-	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MOON: "moon-test", AI_TOOLBOX_API_KEY: "toolbox-test", MAGPIE_GATEWAY_KEY: "magpie-test", VOLC_ACCESS_KEY: "volc-ak", VOLC_SECRET_KEY: "volc-sk", CUSTOM: "custom-test" };
+	const map = { GO: "go-test", MINI: "mini-test", DEEP: "deep-test", ROUTER: "router-test", MAGPIE_GATEWAY_KEY: "magpie-test", VOLC_ACCESS_KEY: "volc-ak", VOLC_SECRET_KEY: "volc-sk", CUSTOM: "custom-test" };
 	const requests = [];
 	let fail = false;
 	globalThis.fetch = async (url, options) => {
@@ -59,12 +51,10 @@ function boot() {
 		if (String(url).includes("coding_plan/remains")) return jsonResponse(miniPayload);
 		if (String(url).includes("/v1/magpie/quotas")) return jsonResponse(magpiePayload);
 		if (String(url).includes("/v1/magpie/usage/requests")) return jsonResponse(magpieUsagePayload);
-		if (String(url).includes("/panel/api/overview")) return jsonResponse(overviewPayload);
 		if (String(url).includes("open.volcengineapi.com")) return jsonResponse(arkPayload);
 		if (String(url).includes("opencode.ai")) return jsonResponse(usagePayload());
 		if (String(url).includes("deepseek.com")) return jsonResponse({ balance_infos: [{ total_balance: "12.3456", currency: "CNY" }, { total_balance: "0", currency: "USD" }] });
 		if (String(url).includes("openrouter.ai")) return jsonResponse({ data: { total_credits: 10, total_usage: 3.5 } });
-		if (String(url).includes("moonshot.cn")) return jsonResponse({ data: { available_balance: "0" } });
 		throw new Error("Unexpected URL");
 	};
 	const entry = { options: { id: "llm-pi-ai" }, fiber: { uid: 1, config: { providers: { get: () => providers } } } };
@@ -90,8 +80,7 @@ test("provider route switches GO, MiniMax and monetary balances with matching cr
 	assert.equal(mini.body.usage.monthly, undefined);
 	assert.deepEqual((await app.usage("deepseek")).body.balances, [{ amount: 12.3456, currency: "CNY" }, { amount: 0, currency: "USD" }]);
 	assert.equal((await app.usage("openrouter")).body.balances[0].amount, 6.5);
-	assert.equal((await app.usage("moonshot-cn")).body.balances[0].amount, 0);
-	assert.deepEqual(app.requests.map((request) => request.auth), ["Bearer go-test", "Bearer mini-test", "Bearer deep-test", "Bearer router-test", "Bearer moon-test"]);
+	assert.deepEqual(app.requests.map((request) => request.auth), ["Bearer go-test", "Bearer mini-test", "Bearer deep-test", "Bearer router-test"]);
 	assert.ok(!JSON.stringify(mini.body).includes("mini-test"));
 });
 
@@ -107,26 +96,6 @@ test("unsupported routes, custom proxies and missing credentials never fall back
 	delete app.map.MINI;
 	assert.equal((await app.usage("minimax-cn")).body.reason, "missing-credential");
 	assert.equal(app.requests.length, 0);
-});
-
-test("AI Toolbox returns remaining credits without percentage conversion", async () => {
-	const app = boot();
-	const workbuddy = await app.usage("ai-toolbox", "cn:glm-5.3");
-	assert.equal(workbuddy.body.provider.name, "AI 工具箱网关");
-	assert.equal(workbuddy.body.kind, "credits");
-	assert.deepEqual(workbuddy.body.credits, { remaining: 4604, total: 10400 });
-	assert.equal(workbuddy.body.usage, undefined);
-	const doubao = await app.usage("ai-toolbox", "doubao/doubao");
-	assert.deepEqual(doubao.body.credits, { remaining: 4004, total: 4100 });
-	assert.equal(doubao.body.usage, undefined);
-	const unsupported = await app.usage("ai-toolbox", "antigravity/model");
-	assert.equal(unsupported.body.kind, "unavailable");
-	assert.equal(unsupported.body.reason, "model-unsupported");
-	delete app.map.AI_TOOLBOX_API_KEY;
-	assert.equal((await app.usage("ai-toolbox", "loomy/model")).body.reason, "missing-credential");
-	assert.equal(app.requests.length, 3);
-	assert.ok(app.requests.every((request) => request.url === "http://127.0.0.1:7863/panel/api/overview" && request.auth === "Bearer toolbox-test"));
-	assert.ok(!workbuddy.raw.includes("toolbox-test"));
 });
 
 test("Volcengine signature follows the SDK canonical form", () => {

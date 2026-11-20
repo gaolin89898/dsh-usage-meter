@@ -1,6 +1,6 @@
 # 把额度放进侧边栏
 
-**[dsh-usage-meter](https://github.com/gaolin89898/dsh-usage-meter)** 是 [DSH](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）的侧边栏小组件：跟随会话当前所用服务，实时显示对应的额度或余额——OpenCode GO 的 5 小时 / 周 / 月用量窗口，MiniMax 的滚动与周用量，DeepSeek / OpenRouter / Moonshot 的可用余额，以及 Magpie 各上游账号的套餐与余额。每条用量条下再叠一条时间条——额度花得快还是慢，一眼可见。
+**[dsh-usage-meter](https://github.com/gaolin89898/dsh-usage-meter)** 是 [DSH](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）的侧边栏小组件：跟随会话当前所用服务，实时显示对应的额度或余额——OpenCode GO 的 5 小时 / 周 / 月用量窗口，MiniMax 的滚动与周用量，DeepSeek / OpenRouter 的可用余额，以及 Magpie 各上游账号的套餐与余额。每条用量条下再叠一条时间条——额度花得快还是慢，一眼可见。
 
 `DSH ≥ 0.1.7` · `MIT License` · `● v1.1.6`
 
@@ -67,13 +67,8 @@ $ dsh web
 | MiniMax 国内 · 国际 | Coding Plan 的滚动与周用量；不补造月额度或重置时间 | ○ 内置 |
 | DeepSeek API · 登录账号 | 按币种显示可用余额；登录账号合计充值与赠送钱包 | ○ 内置 |
 | OpenRouter | 总充值减去已用金额 | ○ 内置 |
-| Moonshot 国内 · 国际 | 可用余额 | ○ 内置 |
 | Magpie | 当前上游账号的余额与用量窗口；`group/*` 模型跟随本会话真正被服务的账号 | ○ 内置 |
-| AI 工具箱网关 | 按会话模型前缀聚合对应平台的剩余积分与总积分 | ○ 内置 |
 | 其他服务 · 自定义代理 | 提示暂不支持查询 | — |
-
-AI 工具箱网关（workbuddy2api-panel）联动：供应商选 `ai-toolbox` 时按会话模型前缀显示对应平台的剩余积分和总积分，不折算百分比。
-密钥复用 `AI_TOOLBOX_API_KEY`（由 dsh-workbuddy-accounts 自动写入 DSH 凭证库），请求仅在 Host 进程访问本机网关。
 
 Magpie 联动：供应商选 `magpie` 时读取 `GET /v1/magpie/quotas`，密钥引用 `MAGPIE_GATEWAY_KEY`。只展示 Magpie 当前使用的账号，不提供账号切换：`group/*` 模型按会话 id 从 `/v1/magpie/usage/requests` 里匹配出真正服务该会话的上游账号，取不到时回退到接口标记为 `last`（或最近使用时间最新）的账号；普通 `provider/model` 在该上游内取当前账号。余额按上游返回的币种或积分原样展示，套餐窗口显示已用百分比。
 
