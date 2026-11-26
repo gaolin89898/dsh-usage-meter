@@ -337,6 +337,7 @@ test("Ark routes render the shared subscription layout with remaining amounts", 
 	const view = renderWidget({ data });
 	assert.equal(view.find("ocg-name")[0].props.children, "火山 Agent Plan");
 	assert.equal(view.find("ocg-monthly-value")[0].props.children, 'quota.remaining{"pct":93.67}');
+	assert.equal(view.find("ocg-monthly-value")[0].props["data-remaining"], "true");
 	assert.equal(view.find("ocg-monthly-value")[0].props["data-level"], "normal");
 	assert.equal(view.find("ocg-row-percent")[0].props["data-level"], "error");
 	assert.equal(view.find("ocg-row").length, 2);
