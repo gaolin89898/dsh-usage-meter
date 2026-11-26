@@ -214,12 +214,12 @@ DSH `0.1.7-rc` 起通过官方 client-modules 扫描装载组件：包的 `dsh.c
 
 ## 兼容性
 
-兼容 DSH `0.1.7` 及以上（含 `0.2.x` 线，已在 `0.2.2-rc.2` 验证）。范围声明在 `peerDependencies`，宿主在条目启用前强制校验——`0.2.0` 起是硬闸门，不匹配则整行被禁用：
+支持 DSH `0.1.7` 至 `0.2.x` 的正式版，也已验证 `0.2.2-rc.2` 和 `0.2.3-alpha.2`。后者随附 schemastery `3.20.0-alpha.1`。插件在 `peerDependencies` 中声明兼容范围，DSH 从 `0.2.0` 起会在启用条目前检查宿主版本。
 
 ```json
 "peerDependencies": {
-  "@deepseek-ai/schemastery": "^3.18.4",
-  "@deepseek-ai/dsh": ">=0.1.7-rc.1 <0.2.0-0 || >=0.2.0 <0.3.0-0 || >=0.2.2-rc.1 <0.3.0-0"
+  "@deepseek-ai/schemastery": "^3.18.4 || ~3.20.0-alpha.1",
+  "@deepseek-ai/dsh": ">=0.1.7-rc.1 <0.2.0-0 || >=0.2.0 <0.3.0-0 || >=0.2.2-rc.1 <0.3.0-0 || 0.2.3-alpha.2"
 }
 ```
 
