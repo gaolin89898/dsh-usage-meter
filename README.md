@@ -2,7 +2,7 @@
 
 **[dsh-usage-meter](https://github.com/gaolin89898/dsh-usage-meter)** 是 [DSH](https://github.com/deepseek-ai/deepseek-harness)（DeepSeek Harness）的侧边栏小组件：跟随会话当前所用服务，实时显示对应的额度或余额——OpenCode GO 的 5 小时 / 周 / 月用量窗口，MiniMax 的滚动与周用量，DeepSeek / OpenRouter 的可用余额，以及 Magpie 各上游账号的套餐与余额。每条用量条下再叠一条时间条——额度花得快还是慢，一眼可见。
 
-`DSH ≥ 0.1.7` · `MIT License` · `● v1.1.7`
+`DSH ≥ 0.1.7` · `MIT License` · `● v1.1.8`
 
 第一次装 DSH 插件？直接看[使用者指南](docs/INSTALL.zh.md)，一步步照做即可。
 
@@ -25,7 +25,7 @@ OPENCODE_GO_API_KEY: sk-...
 $ dsh web
 ```
 
-也可以从 [v1.0.1 Release](https://github.com/gaolin89898/dsh-usage-meter/releases/tag/v1.0.1) 下载 `dsh-usage-meter-1.0.1.tgz`，执行 `dsh plugin --profile web add ./dsh-usage-meter-1.0.1.tgz` 安装。npm 上的同名包属于其他项目，请使用本仓库的安装包或源码目录。
+也可以从 [v1.1.8 Release](https://github.com/gaolin89898/dsh-usage-meter/releases/tag/v1.1.8) 下载 `gl070900-dsh-usage-meter-1.1.8.tgz`，执行 `dsh plugin --profile web add ./gl070900-dsh-usage-meter-1.1.8.tgz` 安装。npm 上的同名包属于其他项目，请使用本仓库的安装包或源码目录。
 
 升级旧版本：本地目录安装的用户先更新源码，再对同一目录执行安装命令。包名已改为 `@gl070900/dsh-usage-meter`，配置 entry id 保持不变；请确认插件面板只启用一份用量组件，完整退出 DSH 后再启动并硬刷新。
 

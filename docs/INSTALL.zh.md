@@ -4,7 +4,7 @@
 
 > 插件并非 OpenCode GO 专用：装好后它会跟随会话当前所用服务，显示 OpenCode GO / MiniMax / Magpie 的用量，或 DeepSeek / OpenRouter 的余额——后者直接复用你在 DSH 里已配置的凭据，无需额外设置。本指南以 OpenCode GO 为主线。
 
-> 本指南对应 **1.1.7**:小组件可以选择额度来源——默认跟随 `dsh-opencode-go` 插件的
+> 本指南对应 **1.1.8**:小组件可以选择额度来源——默认跟随 `dsh-opencode-go` 插件的
 > **当前账号**,读不到时自动回退到 DSH 内置提供商。
 
 ## 前置条件
@@ -28,10 +28,10 @@
 dsh plugin --profile web add /path/to/dsh-usage-meter
 ```
 
-也可以从 [GitHub Release](https://github.com/gaolin89898/dsh-usage-meter/releases/tag/v1.0.1) 下载 `dsh-usage-meter-1.0.1.tgz`，然后执行：
+也可以从 [GitHub Release](https://github.com/gaolin89898/dsh-usage-meter/releases/tag/v1.1.8) 下载 `gl070900-dsh-usage-meter-1.1.8.tgz`，然后执行：
 
 ```bash
-dsh plugin --profile web add ./dsh-usage-meter-1.0.1.tgz
+dsh plugin --profile web add ./gl070900-dsh-usage-meter-1.1.8.tgz
 ```
 
 > - 包名为 `@gl070900/dsh-usage-meter`，请使用本仓库的安装包或源码目录
